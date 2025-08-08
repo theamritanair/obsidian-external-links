@@ -1,134 +1,204 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import {
+	App,
+	Plugin,
+	PluginSettingTab,
+	Setting,
+	WorkspaceLeaf,
+	ItemView,
+} from "obsidian";
 
-// Remember to rename these classes and interfaces!
-
-interface MyPluginSettings {
-	mySetting: string;
+interface ExternalLinksPluginSettings {
+	excludePatterns: string[];
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
-}
+const DEFAULT_SETTINGS: ExternalLinksPluginSettings = {
+	excludePatterns: [],
+};
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+const VIEW_TYPE_EXTERNAL_LINKS = "external-links-view";
 
-	async onload() {
-		await this.loadSettings();
+class ExternalLinksView extends ItemView {
+	constructor(leaf: WorkspaceLeaf) {
+		super(leaf);
+	}
 
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
+	getViewType() {
+		return VIEW_TYPE_EXTERNAL_LINKS;
+	}
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
+	getDisplayText() {
+		return "External Links";
+	}
 
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
+	async onOpen() {
+		const container = this.containerEl.children[1];
+		container.empty();
+		container.createEl("h4", { text: "External Links in Vault" });
+
+		const links = await this.collectExternalLinks();
+		this.displayLinks(links, container);
+	}
+
+	async collectExternalLinks(): Promise<{ file: string; links: string[] }[]> {
+		const files = this.app.vault.getMarkdownFiles();
+		const results: { file: string; links: string[] }[] = [];
+
+		for (const file of files) {
+			const content = await this.app.vault.read(file);
+			const links = this.extractExternalLinks(content);
+			if (links.length > 0) {
+				results.push({
+					file: file.path,
+					links: links,
+				});
 			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
+		}
+
+		return results;
+	}
+
+	private extractExternalLinks(content: string): string[] {
+		const urlRegex = /\[([^\]]*)\]\((https?:\/\/[^\s\)]+)\)/g;
+		const plainUrlRegex = /(https?:\/\/[^\s\)]+)/g;
+		const links: string[] = [];
+		let match;
+
+		while ((match = urlRegex.exec(content)) !== null) {
+			links.push(match[2]);
+		}
+
+		while ((match = plainUrlRegex.exec(content)) !== null) {
+			if (!links.includes(match[1])) {
+				links.push(match[1]);
 			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
+		}
 
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
+		return [...new Set(links)];
+	}
+
+	private displayLinks(
+		links: { file: string; links: string[] }[],
+		container: Element
+	) {
+		if (links.length === 0) {
+			container.createEl("p", {
+				text: "No external links found in the vault.",
+			});
+			return;
+		}
+
+		const ul = container.createEl("ul");
+		for (const fileLinks of links) {
+			const li = ul.createEl("li");
+			li.createEl("strong", { text: fileLinks.file });
+			const linksList = li.createEl("ul");
+
+			for (const link of fileLinks.links) {
+				const linkItem = linksList.createEl("li");
+				const a = linkItem.createEl("a", {
+					href: link,
+					text: link,
+				});
+				a.addEventListener("click", (e) => {
+					e.preventDefault();
+					window.open(link, "_blank");
+				});
 			}
-		});
-
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
-	}
-
-	onunload() {
-
-	}
-
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-	}
-
-	async saveSettings() {
-		await this.saveData(this.settings);
+		}
 	}
 }
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
+class ExternalLinksSettingTab extends PluginSettingTab {
+	plugin: ExternalLinksPlugin;
 
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
-}
-
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
-
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: ExternalLinksPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
 
 	display(): void {
-		const {containerEl} = this;
+		const { containerEl } = this;
 
 		containerEl.empty();
 
+		containerEl.createEl("h2", { text: "External Links Settings" });
+
 		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
+			.setName("Exclude patterns")
+			.setDesc(
+				"Regex patterns to exclude from external links (one per line)"
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder("^https://excluded-domain.com")
+					.setValue(this.plugin.settings.excludePatterns.join("\n"))
+					.onChange(async (value) => {
+						this.plugin.settings.excludePatterns = value
+							.split("\n")
+							.filter((p) => p.length > 0);
+						await this.plugin.saveSettings();
+					})
+			);
+	}
+}
+
+export default class ExternalLinksPlugin extends Plugin {
+	settings: ExternalLinksPluginSettings;
+	private view: ExternalLinksView;
+
+	async onload() {
+		await this.loadSettings();
+
+		this.registerView(
+			VIEW_TYPE_EXTERNAL_LINKS,
+			(leaf: WorkspaceLeaf) => (this.view = new ExternalLinksView(leaf))
+		);
+
+		this.addRibbonIcon("link", "External Links", async () => {
+			await this.activateView();
+		});
+
+		this.addCommand({
+			id: "show-external-links",
+			name: "Show External Links",
+			callback: async () => {
+				await this.activateView();
+			},
+		});
+
+		this.addSettingTab(new ExternalLinksSettingTab(this.app, this));
+	}
+
+	async activateView() {
+		const { workspace } = this.app;
+
+		let leaf = workspace.getLeavesOfType(VIEW_TYPE_EXTERNAL_LINKS)[0];
+
+		if (!leaf) {
+			const rightLeaf = workspace.getRightLeaf(false);
+			if (!rightLeaf) {
+				leaf = workspace.getLeaf("tab");
+			} else {
+				leaf = rightLeaf;
+			}
+			await leaf.setViewState({
+				type: VIEW_TYPE_EXTERNAL_LINKS,
+				active: true,
+			});
+		}
+
+		workspace.revealLeaf(leaf);
+	}
+
+	async loadSettings() {
+		this.settings = Object.assign(
+			{},
+			DEFAULT_SETTINGS,
+			await this.loadData()
+		);
+	}
+
+	async saveSettings() {
+		await this.saveData(this.settings);
 	}
 }

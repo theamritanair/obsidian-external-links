@@ -1,11 +1,10 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
+	"id": "obsidian-external-links",
+	"name": "External Links View",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"description": "View all external links from your vault in a single organized view.",
+	"author": "theamritanair",
+	"authorUrl": "https://github.com/theamritanair",
 	"isDesktopOnly": false
 }
