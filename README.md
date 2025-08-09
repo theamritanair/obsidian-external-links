@@ -1,6 +1,6 @@
-# Obsidian External Links
+# External Links View
 
-View all external links from your Obsidian notes in one organized place, sorted by their source notes.
+View all external links from your notes in one organized place, sorted by their source notes.
 
 ## Features
 
