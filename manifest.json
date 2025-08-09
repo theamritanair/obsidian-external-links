@@ -3,8 +3,9 @@
 	"name": "External Links View",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "View all external links from your vault in a single organized view.",
+	"description": "View all external links from your Obsidian notes in one organized place, sorted by their source notes.",
 	"author": "theamritanair",
 	"authorUrl": "https://github.com/theamritanair",
-	"isDesktopOnly": false
+	"isDesktopOnly": false,
+	"fundingUrl": "https://buymeacoffee.com/notamrita"
 }

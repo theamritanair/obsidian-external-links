@@ -1,6 +1,6 @@
 # Obsidian External Links
 
-This is a plugin for [Obsidian](https://obsidian.md) that provides a dedicated view to see all external links from your notes in one organized place.
+View all external links from your Obsidian notes in one organized place, sorted by their source notes.
 
 ## Features
 
