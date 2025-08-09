@@ -83,21 +83,62 @@ class ExternalLinksView extends ItemView {
 		if (links.length === 0) {
 			container.createEl("p", {
 				text: "No external links found in the vault.",
+				cls: "external-links-empty-message",
 			});
 			return;
 		}
 
-		const ul = container.createEl("ul");
+		const linkCount = links.reduce(
+			(sum, fileLinks) => sum + fileLinks.links.length,
+			0
+		);
+		container.createEl("p", {
+			text: `Found ${linkCount} external links in ${links.length} files`,
+			cls: "external-links-summary",
+		});
+
+		const ul = container.createEl("ul", { cls: "external-links-list" });
 		for (const fileLinks of links) {
-			const li = ul.createEl("li");
-			li.createEl("strong", { text: fileLinks.file });
-			const linksList = li.createEl("ul");
+			const li = ul.createEl("li", { cls: "external-links-file" });
+			const fileHeader = li.createEl("div", {
+				cls: "external-links-file-header",
+			});
+
+			fileHeader.createEl("span", {
+				text: "📄",
+				cls: "external-links-file-icon",
+			});
+			fileHeader.createEl("strong", {
+				text: fileLinks.file,
+				cls: "external-links-filename",
+			});
+
+			fileHeader.createEl("span", {
+				text: `${fileLinks.links.length} links`,
+				cls: "external-links-count-badge",
+			});
+
+			const linksList = li.createEl("ul", {
+				cls: "external-links-sublist",
+			});
 
 			for (const link of fileLinks.links) {
-				const linkItem = linksList.createEl("li");
-				const a = linkItem.createEl("a", {
+				const linkItem = linksList.createEl("li", {
+					cls: "external-links-item",
+				});
+				const linkContainer = linkItem.createEl("div", {
+					cls: "external-links-link-container",
+				});
+
+				linkContainer.createEl("span", {
+					text: "🔗",
+					cls: "external-links-link-icon",
+				});
+
+				const a = linkContainer.createEl("a", {
 					href: link,
 					text: link,
+					cls: "external-links-url",
 				});
 				a.addEventListener("click", (e) => {
 					e.preventDefault();

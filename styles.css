@@ -1,8 +1,96 @@
 /*
+ * Styles for the External Links plugin
+ */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.external-links-empty-message {
+	color: var(--text-muted);
+	font-style: italic;
+	padding: 20px;
+	text-align: center;
+}
 
-If your plugin does not need CSS, delete this file.
+.external-links-summary {
+	color: var(--text-muted);
+	margin-bottom: 20px;
+	padding: 10px;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
 
-*/
+.external-links-list {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+.external-links-file {
+	margin-bottom: 20px;
+	background: var(--background-secondary);
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.external-links-file-header {
+	display: flex;
+	align-items: center;
+	padding: 10px;
+	background: var(--background-secondary-alt);
+	gap: 8px;
+}
+
+.external-links-file-icon {
+	margin-right: 4px;
+}
+
+.external-links-filename {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.external-links-count-badge {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	padding: 2px 8px;
+	border-radius: 10px;
+	font-size: 0.8em;
+}
+
+.external-links-sublist {
+	list-style: none;
+	padding: 10px;
+	margin: 0;
+}
+
+.external-links-item {
+	margin: 8px 0;
+}
+
+.external-links-link-container {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px;
+	border-radius: 4px;
+	transition: background-color 0.2s ease;
+}
+
+.external-links-link-container:hover {
+	background: var(--background-modifier-hover);
+}
+
+.external-links-link-icon {
+	flex-shrink: 0;
+}
+
+.external-links-url {
+	color: var(--text-accent);
+	text-decoration: none;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.external-links-url:hover {
+	text-decoration: underline;
+}
