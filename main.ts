@@ -257,6 +257,25 @@ export default class ExternalLinksPlugin extends Plugin {
 			(leaf: WorkspaceLeaf) => (this.view = new ExternalLinksView(leaf))
 		);
 
+		// Register event handlers for file changes
+		this.registerEvent(
+			this.app.vault.on("modify", () => {
+				this.refreshView();
+			})
+		);
+
+		this.registerEvent(
+			this.app.vault.on("create", () => {
+				this.refreshView();
+			})
+		);
+
+		this.registerEvent(
+			this.app.vault.on("delete", () => {
+				this.refreshView();
+			})
+		);
+
 		this.addRibbonIcon("link", "External Links", async () => {
 			await this.activateView();
 		});
@@ -303,5 +322,16 @@ export default class ExternalLinksPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+	}
+
+	private async refreshView() {
+		const leaves = this.app.workspace.getLeavesOfType(
+			VIEW_TYPE_EXTERNAL_LINKS
+		);
+		for (const leaf of leaves) {
+			if (leaf.view instanceof ExternalLinksView) {
+				await leaf.view.onOpen();
+			}
+		}
 	}
 }
