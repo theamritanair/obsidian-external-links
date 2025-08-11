@@ -10,6 +10,8 @@ View all external links from your notes in one organized place, sorted by their 
 -   ⚙️ Settings to exclude specific URL patterns
 -   🎯 Quick access via ribbon icon or command palette
 
+![External Links View Screenshot](external-links.jpg)
+
 ## How to Use
 
 1. Install the plugin from Obsidian's Community Plugins
