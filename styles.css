@@ -29,12 +29,61 @@
 	overflow: hidden;
 }
 
+.external-links-button-container {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 16px;
+	padding: 0 10px;
+}
+
+.external-links-expand-button,
+.external-links-collapse-button {
+	padding: 4px 8px;
+	border-radius: 4px;
+	background: var(--background-modifier-border);
+	color: var(--text-normal);
+	border: none;
+	cursor: pointer;
+	font-size: 12px;
+	transition: all 0.2s ease;
+}
+
+.external-links-expand-button:hover,
+.external-links-collapse-button:hover {
+	background: var(--background-modifier-hover);
+}
+
+.external-links-expand-button.is-active,
+.external-links-collapse-button.is-active {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
 .external-links-file-header {
 	display: flex;
 	align-items: center;
 	padding: 10px;
 	background: var(--background-secondary-alt);
 	gap: 8px;
+	cursor: pointer;
+	user-select: none;
+	transition: background-color 0.2s ease;
+}
+
+.external-links-file-header:hover {
+	background: var(--background-modifier-hover);
+}
+
+.external-links-file-header.collapsed::before {
+	content: "►";
+	font-size: 0.8em;
+	margin-right: 4px;
+}
+
+.external-links-file-header:not(.collapsed)::before {
+	content: "▼";
+	font-size: 0.8em;
+	margin-right: 4px;
 }
 
 .external-links-file-icon {

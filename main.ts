@@ -5,6 +5,7 @@ import {
 	Setting,
 	WorkspaceLeaf,
 	ItemView,
+	IconName,
 } from "obsidian";
 
 interface ExternalLinksPluginSettings {
@@ -26,6 +27,10 @@ class ExternalLinksView extends ItemView {
 		return VIEW_TYPE_EXTERNAL_LINKS;
 	}
 
+	getIcon(): IconName {
+		return "link";
+	}
+
 	getDisplayText() {
 		return "External Links";
 	}
@@ -35,8 +40,52 @@ class ExternalLinksView extends ItemView {
 		container.empty();
 		container.createEl("h4", { text: "External Links in Vault" });
 
+		const buttonContainer = container.createEl("div", {
+			cls: "external-links-button-container",
+		});
+
+		const expandAllButton = buttonContainer.createEl("button", {
+			text: "Expand All",
+			cls: "external-links-expand-button",
+		});
+
+		const collapseAllButton = buttonContainer.createEl("button", {
+			text: "Collapse All",
+			cls: "external-links-collapse-button",
+		});
+
 		const links = await this.collectExternalLinks();
 		this.displayLinks(links, container);
+
+		// Add click handlers for expand/collapse all
+		expandAllButton.addEventListener("click", () => {
+			const lists = container.querySelectorAll(".external-links-sublist");
+			lists.forEach((list: HTMLElement) => {
+				list.style.display = "block";
+				const header = list.parentElement?.querySelector(
+					".external-links-file-header"
+				);
+				header?.classList.remove("collapsed");
+			});
+			expandAllButton.classList.add("is-active");
+			collapseAllButton.classList.remove("is-active");
+		});
+
+		collapseAllButton.addEventListener("click", () => {
+			const lists = container.querySelectorAll(".external-links-sublist");
+			lists.forEach((list: HTMLElement) => {
+				list.style.display = "none";
+				const header = list.parentElement?.querySelector(
+					".external-links-file-header"
+				);
+				header?.classList.add("collapsed");
+			});
+			collapseAllButton.classList.add("is-active");
+			expandAllButton.classList.remove("is-active");
+		});
+
+		// Set initial state (expanded by default)
+		expandAllButton.classList.add("is-active");
 	}
 
 	async collectExternalLinks(): Promise<{ file: string; links: string[] }[]> {
@@ -116,6 +165,19 @@ class ExternalLinksView extends ItemView {
 			fileHeader.createEl("span", {
 				text: `${fileLinks.links.length} links`,
 				cls: "external-links-count-badge",
+			});
+
+			// Add click handler for collapse/expand
+			fileHeader.addEventListener("click", (e) => {
+				const list = fileHeader.parentElement?.querySelector(
+					".external-links-sublist"
+				) as HTMLElement;
+				if (list) {
+					const isCollapsed =
+						fileHeader.classList.contains("collapsed");
+					list.style.display = isCollapsed ? "block" : "none";
+					fileHeader.classList.toggle("collapsed");
+				}
 			});
 
 			const linksList = li.createEl("ul", {
