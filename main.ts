@@ -6,14 +6,20 @@ import {
 	WorkspaceLeaf,
 	ItemView,
 	IconName,
+	TFile,
+	TAbstractFile,
 } from "obsidian";
 
 interface ExternalLinksPluginSettings {
 	excludePatterns: string[];
+	excludePathRegex: string;
+	linkCache: Record<string, string[]>;
 }
 
 const DEFAULT_SETTINGS: ExternalLinksPluginSettings = {
 	excludePatterns: [],
+	excludePathRegex: "",
+	linkCache: {},
 };
 
 const VIEW_TYPE_EXTERNAL_LINKS = "external-links-view";
@@ -54,9 +60,6 @@ class ExternalLinksView extends ItemView {
 			cls: "external-links-collapse-button",
 		});
 
-		const links = await this.collectExternalLinks();
-		this.displayLinks(links, container);
-
 		// Add click handlers for expand/collapse all
 		expandAllButton.addEventListener("click", () => {
 			const lists = container.querySelectorAll(".external-links-sublist");
@@ -88,41 +91,26 @@ class ExternalLinksView extends ItemView {
 		expandAllButton.classList.add("is-active");
 	}
 
-	async collectExternalLinks(): Promise<{ file: string; links: string[] }[]> {
-		const files = this.app.vault.getMarkdownFiles();
-		const results: { file: string; links: string[] }[] = [];
+	updateView(links: { file: string; links: string[] }[]) {
+		const container = this.containerEl.children[1];
 
-		for (const file of files) {
-			const content = await this.app.vault.read(file);
-			const links = this.extractExternalLinks(content);
-			if (links.length > 0) {
-				results.push({
-					file: file.path,
-					links: links,
-				});
-			}
+		// Clear existing content except for the header and buttons
+		const list = container.querySelector(".external-links-list");
+		if (list) {
+			list.remove();
+		}
+		const summary = container.querySelector(".external-links-summary");
+		if (summary) {
+			summary.remove();
+		}
+		const emptyMessage = container.querySelector(
+			".external-links-empty-message"
+		);
+		if (emptyMessage) {
+			emptyMessage.remove();
 		}
 
-		return results;
-	}
-
-	private extractExternalLinks(content: string): string[] {
-		const urlRegex = /\[([^\]]*)\]\((https?:\/\/[^\s\)]+)\)/g;
-		const plainUrlRegex = /(https?:\/\/[^\s\)]+)/g;
-		const links: string[] = [];
-		let match;
-
-		while ((match = urlRegex.exec(content)) !== null) {
-			links.push(match[2]);
-		}
-
-		while ((match = plainUrlRegex.exec(content)) !== null) {
-			if (!links.includes(match[1])) {
-				links.push(match[1]);
-			}
-		}
-
-		return [...new Set(links)];
+		this.displayLinks(links, container);
 	}
 
 	private displayLinks(
@@ -227,11 +215,25 @@ class ExternalLinksSettingTab extends PluginSettingTab {
 		containerEl.createEl("h2", { text: "External Links Settings" });
 
 		new Setting(containerEl)
+			.setName("Exclude path regex")
+			.setDesc("Regex to exclude file paths from the list")
+			.addText((text) =>
+				text
+					.setPlaceholder("^private/")
+					.setValue(this.plugin.settings.excludePathRegex)
+					.onChange(async (value) => {
+						this.plugin.settings.excludePathRegex = value;
+						await this.plugin.saveSettings();
+						this.plugin.fullRefresh();
+					})
+			);
+
+		new Setting(containerEl)
 			.setName("Exclude patterns")
 			.setDesc(
 				"Regex patterns to exclude from external links (one per line)"
 			)
-			.addText((text) =>
+			.addTextArea((text) =>
 				text
 					.setPlaceholder("^https://excluded-domain.com")
 					.setValue(this.plugin.settings.excludePatterns.join("\n"))
@@ -240,6 +242,7 @@ class ExternalLinksSettingTab extends PluginSettingTab {
 							.split("\n")
 							.filter((p) => p.length > 0);
 						await this.plugin.saveSettings();
+						this.plugin.fullRefresh();
 					})
 			);
 	}
@@ -257,22 +260,26 @@ export default class ExternalLinksPlugin extends Plugin {
 			(leaf: WorkspaceLeaf) => (this.view = new ExternalLinksView(leaf))
 		);
 
+		this.app.workspace.onLayoutReady(() => {
+			this.fullRefresh();
+		});
+
 		// Register event handlers for file changes
 		this.registerEvent(
-			this.app.vault.on("modify", () => {
-				this.refreshView();
+			this.app.metadataCache.on("changed", (file) => {
+				this.updateFileCache(file);
 			})
 		);
 
 		this.registerEvent(
-			this.app.vault.on("create", () => {
-				this.refreshView();
+			this.app.vault.on("delete", (file) => {
+				this.removeFileFromCache(file);
 			})
 		);
 
 		this.registerEvent(
-			this.app.vault.on("delete", () => {
-				this.refreshView();
+			this.app.vault.on("rename", (file, oldPath) => {
+				this.renameFileInCache(file, oldPath);
 			})
 		);
 
@@ -289,6 +296,10 @@ export default class ExternalLinksPlugin extends Plugin {
 		});
 
 		this.addSettingTab(new ExternalLinksSettingTab(this.app, this));
+	}
+
+	onunload() {
+		this.saveSettings();
 	}
 
 	async activateView() {
@@ -310,6 +321,7 @@ export default class ExternalLinksPlugin extends Plugin {
 		}
 
 		workspace.revealLeaf(leaf);
+		this.refreshView();
 	}
 
 	async loadSettings() {
@@ -324,13 +336,106 @@ export default class ExternalLinksPlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
-	private async refreshView() {
+	async fullRefresh() {
+		this.settings.linkCache = {};
+		const files = this.app.vault.getMarkdownFiles();
+		const excludePathRegex = this.settings.excludePathRegex
+			? new RegExp(this.settings.excludePathRegex)
+			: null;
+
+		for (const file of files) {
+			if (excludePathRegex && excludePathRegex.test(file.path)) {
+				continue;
+			}
+			await this.updateFileCache(file, false);
+		}
+		this.refreshView();
+	}
+
+	async updateFileCache(file: TFile, refresh: boolean = true) {
+		const excludePathRegex = this.settings.excludePathRegex
+			? new RegExp(this.settings.excludePathRegex)
+			: null;
+
+		if (excludePathRegex && excludePathRegex.test(file.path)) {
+			delete this.settings.linkCache[file.path];
+			if (refresh) {
+				this.refreshView();
+			}
+			return;
+		}
+
+		const content = await this.app.vault.cachedRead(file);
+		const links = this.extractExternalLinks(content);
+		if (links.length > 0) {
+			this.settings.linkCache[file.path] = links;
+		} else {
+			delete this.settings.linkCache[file.path];
+		}
+		if (refresh) {
+			this.refreshView();
+		}
+	}
+
+	async removeFileFromCache(file: TAbstractFile) {
+		if (file instanceof TFile) {
+			delete this.settings.linkCache[file.path];
+			this.refreshView();
+		}
+	}
+
+	async renameFileInCache(file: TAbstractFile, oldPath: string) {
+		if (file instanceof TFile) {
+			if (this.settings.linkCache[oldPath]) {
+				this.settings.linkCache[file.path] =
+					this.settings.linkCache[oldPath];
+				delete this.settings.linkCache[oldPath];
+				this.refreshView();
+			}
+		}
+	}
+
+	private extractExternalLinks(content: string): string[] {
+		const urlRegex = /\[([^\]]*)\]\((https?:\/\/[^\s\)]+)\)/g;
+		const plainUrlRegex = /(https?:\/\/[^\s\)]+)/g;
+		const links: string[] = [];
+		let match;
+
+		while ((match = urlRegex.exec(content)) !== null) {
+			links.push(match[2]);
+		}
+
+		while ((match = plainUrlRegex.exec(content)) !== null) {
+			if (!links.includes(match[1])) {
+				links.push(match[1]);
+			}
+		}
+
+		const excludePatterns = this.settings.excludePatterns.map(
+			(p) => new RegExp(p)
+		);
+
+		const filteredLinks = links.filter(
+			(link) =>
+				!excludePatterns.some((p) => p.test(link))
+		);
+
+		return [...new Set(filteredLinks)];
+	}
+
+	private refreshView() {
 		const leaves = this.app.workspace.getLeavesOfType(
 			VIEW_TYPE_EXTERNAL_LINKS
 		);
 		for (const leaf of leaves) {
 			if (leaf.view instanceof ExternalLinksView) {
-				await leaf.view.onOpen();
+				const links = Object.entries(this.settings.linkCache).map(
+					([file, links]) => ({
+						file,
+						links,
+					})
+				);
+				leaf.view.updateView(links);
 			}
 		}
 	}
