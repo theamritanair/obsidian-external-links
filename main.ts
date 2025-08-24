@@ -352,7 +352,7 @@ export default class ExternalLinksPlugin extends Plugin {
 		this.refreshView();
 	}
 
-	async updateFileCache(file: TFile, refresh: boolean = true) {
+	async updateFileCache(file: TFile, refresh = true) {
 		const excludePathRegex = this.settings.excludePathRegex
 			? new RegExp(this.settings.excludePathRegex)
 			: null;
@@ -396,8 +396,8 @@ export default class ExternalLinksPlugin extends Plugin {
 	}
 
 	private extractExternalLinks(content: string): string[] {
-		const urlRegex = /\[([^\]]*)\]\((https?:\/\/[^\s\)]+)\)/g;
-		const plainUrlRegex = /(https?:\/\/[^\s\)]+)/g;
+		const urlRegex = /\[([^\]]*)\]\((https?:\/\/[^\s\\)]+)\)/g;
+		const plainUrlRegex = /(https?:\/\/[^\s\\)]+)/g;
 		const links: string[] = [];
 		let match;
 
@@ -416,8 +416,7 @@ export default class ExternalLinksPlugin extends Plugin {
 		);
 
 		const filteredLinks = links.filter(
-			(link) =>
-				!excludePatterns.some((p) => p.test(link))
+			(link) => !excludePatterns.some((p) => p.test(link))
 		);
 
 		return [...new Set(filteredLinks)];
