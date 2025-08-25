@@ -64,7 +64,7 @@ class ExternalLinksView extends ItemView {
 		expandAllButton.addEventListener("click", () => {
 			const lists = container.querySelectorAll(".external-links-sublist");
 			lists.forEach((list: HTMLElement) => {
-				list.style.display = "block";
+				list.classList.remove("hidden");
 				const header = list.parentElement?.querySelector(
 					".external-links-file-header"
 				);
@@ -77,7 +77,7 @@ class ExternalLinksView extends ItemView {
 		collapseAllButton.addEventListener("click", () => {
 			const lists = container.querySelectorAll(".external-links-sublist");
 			lists.forEach((list: HTMLElement) => {
-				list.style.display = "none";
+				list.classList.add("hidden");
 				const header = list.parentElement?.querySelector(
 					".external-links-file-header"
 				);
@@ -161,10 +161,8 @@ class ExternalLinksView extends ItemView {
 					".external-links-sublist"
 				) as HTMLElement;
 				if (list) {
-					const isCollapsed =
-						fileHeader.classList.contains("collapsed");
-					list.style.display = isCollapsed ? "block" : "none";
 					fileHeader.classList.toggle("collapsed");
+					list.classList.toggle("hidden");
 				}
 			});
 
