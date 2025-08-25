@@ -143,3 +143,7 @@
 .external-links-url:hover {
 	text-decoration: underline;
 }
+
+.external-links-sublist.hidden {
+  display: none;
+}
