@@ -38,25 +38,25 @@ class ExternalLinksView extends ItemView {
 	}
 
 	getDisplayText() {
-		return "External Links";
+		return "External links";
 	}
 
 	async onOpen() {
 		const container = this.containerEl.children[1];
 		container.empty();
-		container.createEl("h4", { text: "External Links in Vault" });
+		container.createEl("h4", { text: "External links in vault" });
 
 		const buttonContainer = container.createEl("div", {
 			cls: "external-links-button-container",
 		});
 
 		const expandAllButton = buttonContainer.createEl("button", {
-			text: "Expand All",
+			text: "Expand all",
 			cls: "external-links-expand-button",
 		});
 
 		const collapseAllButton = buttonContainer.createEl("button", {
-			text: "Collapse All",
+			text: "Collapse all",
 			cls: "external-links-collapse-button",
 		});
 
@@ -210,8 +210,6 @@ class ExternalLinksSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		containerEl.createEl("h2", { text: "External Links Settings" });
-
 		new Setting(containerEl)
 			.setName("Exclude path regex")
 			.setDesc("Regex to exclude file paths from the list")
@@ -255,7 +253,7 @@ export default class ExternalLinksPlugin extends Plugin {
 
 		this.registerView(
 			VIEW_TYPE_EXTERNAL_LINKS,
-			(leaf: WorkspaceLeaf) => (this.view = new ExternalLinksView(leaf))
+			(leaf: WorkspaceLeaf) => new ExternalLinksView(leaf)
 		);
 
 		this.app.workspace.onLayoutReady(() => {
@@ -281,13 +279,13 @@ export default class ExternalLinksPlugin extends Plugin {
 			})
 		);
 
-		this.addRibbonIcon("link", "External Links", async () => {
+		this.addRibbonIcon("link", "External links", async () => {
 			await this.activateView();
 		});
 
 		this.addCommand({
 			id: "show-external-links",
-			name: "Show External Links",
+			name: "Show external links",
 			callback: async () => {
 				await this.activateView();
 			},
