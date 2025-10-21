@@ -1,7 +1,7 @@
 {
 	"id": "external-links-view",
 	"name": "External Links View",
-	"version": "1.0.4",
+	"version": "1.0.5",
 	"minAppVersion": "0.15.0",
 	"description": "View all external links from your notes in one organized place, sorted by their source notes.",
 	"author": "theamritanair",
